@@ -15,8 +15,8 @@ namespace GZipStreamMultithread
         {
             //leaveOpen in GZipStream is true for MemoryStream output and false for File output
             args[0] = "compress";
-            args[1] = "@C:\\tmp\\opencv-2.4.9.exe";
-            args[2] = "@C:\\tmp\\opencv-2.4.9";
+            args[1] = "dd.txt";
+            args[2] = "log";
             //args[1] = "C:\\tmp\\MyTest.txt";
             //args[2] = "C:\\tmp\\MyTest";
             if (args.Length > 0)
@@ -33,14 +33,19 @@ namespace GZipStreamMultithread
                                 var archiveName = args[2];
                                 using (FileStream fileFS = new FileStream(fileName, FileMode.Open, FileAccess.Read))
                                 {
-                                    using (FileStream archiveFS = File.Create(archiveName + ".gz"))
+                                    using (FileStream archiveFS = File.Create(fileName + ".gz"))
                                     {
+                                        
                                         using (GZipStream compressionStream = new GZipStream(archiveFS,
                                            CompressionMode.Compress))
                                         {
-                                            fileFS.CopyToAsync(compressionStream);
+                                            //compressionStream.FileName = fileName;
+                                            fileFS.CopyTo(compressionStream);
+                                            compressionStream.Close();
                                         }
+                                        archiveFS.Close();
                                     }
+                                    fileFS.Close();
                                 }
                             }
                             catch (Exception ex)
@@ -72,7 +77,7 @@ namespace GZipStreamMultithread
             {
                 Console.WriteLine("Not enough parameters");
             }
-            Console.ReadLine();
+            //Console.ReadLine();
         }
     }
 }
