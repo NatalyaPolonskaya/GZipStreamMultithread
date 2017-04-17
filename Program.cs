@@ -19,11 +19,15 @@ namespace GZipStreamMultithread
             //leaveOpen in GZipStream is true for MemoryStream output and false for File output
             Console.CancelKeyPress += new ConsoleCancelEventHandler(ConsoleCancelHandler);
             args[0] = "compress";
-            args[1] = "dd2.zip";
+            //args[1] = "dd2.zip";
+            args[1] = "test6.tar";
+           
             FileName = args[1];
             //args[1] = "dd3.zip";
             //args[1] = "dd.txt";
             args[2] = "log";
+            DateTime start = DateTime.Now;
+            Console.WriteLine("Timestamp start " + start);
             //args[1] = "C:\\tmp\\MyTest.txt";
             //args[2] = "C:\\tmp\\MyTest";
             //Console.WriteLine(Environment.ProcessorCount);//4
@@ -53,6 +57,10 @@ namespace GZipStreamMultithread
             {
                 Console.WriteLine("Not enough parameters");
             }
+            DateTime end = DateTime.Now;
+            Console.WriteLine("Timestamp end " + end);
+            Console.WriteLine("Timelapse " + (end-start).Duration());
+            Console.ReadLine();
         }
 
         private static void Decompress(string[] args)
@@ -77,7 +85,7 @@ namespace GZipStreamMultithread
                 //using (FileStream fileFS = new FileStream(fileName, FileMode.Open, FileAccess.Read))
                 using (FileStream fileFS = new FileStream(fileName, FileMode.Open, FileAccess.Read))
                 {
-                    var maxBufferSize = 4 * 1024 *1024;
+                    var maxBufferSize = 1024*1024;// 4 * 1024 * 1024;
                     var buffer = new byte[Math.Min(fileFS.Length, maxBufferSize)];           
                     var compressor = new GZipMultithread();
                     int i = 0;
@@ -86,9 +94,10 @@ namespace GZipStreamMultithread
                     int count = fileFS.Read(buffer, 0, buffer.Length);
                     Thread writer = new Thread(WriteToFile);
                     writer.Start(compressor);
+                    var maxTaskNumber = 64;
                     while (count > 0)
                     {
-                        if (compressor._tasks.Count > 100)
+                        if (compressor._tasks.Count > maxTaskNumber)
                         {
                             Thread.Sleep(100);
                         }
