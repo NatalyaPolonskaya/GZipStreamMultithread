@@ -16,16 +16,18 @@ namespace GZipStreamMultithread
         static void Main(string[] args)
         {
             GC.Collect();
+            Thread.CurrentThread.Priority = ThreadPriority.Lowest;
             //leaveOpen in GZipStream is true for MemoryStream output and false for File output
             Console.CancelKeyPress += new ConsoleCancelEventHandler(ConsoleCancelHandler);
             args[0] = "compress";
-            //args[1] = "dd2.zip";
-            args[1] = "test6.tar";
+            args[1] = "dd3.zip";
+            //args[1] = "test6.tar";
            
-            FileName = args[1];
-            //args[1] = "dd3.zip";
+            //args[1] = "D:\\gzipExperiment\\dd2.zip";
             //args[1] = "dd.txt";
             args[2] = "log";
+            FileName = args[1];
+
             DateTime start = DateTime.Now;
             Console.WriteLine("Timestamp start " + start);
             //args[1] = "C:\\tmp\\MyTest.txt";
@@ -85,7 +87,7 @@ namespace GZipStreamMultithread
                 //using (FileStream fileFS = new FileStream(fileName, FileMode.Open, FileAccess.Read))
                 using (FileStream fileFS = new FileStream(fileName, FileMode.Open, FileAccess.Read))
                 {
-                    var maxBufferSize = 1024*1024;// 4 * 1024 * 1024;
+                    var maxBufferSize = 128 * 1024;//1024*1024;// 4 * 1024 * 1024;
                     var buffer = new byte[Math.Min(fileFS.Length, maxBufferSize)];           
                     var compressor = new GZipMultithread();
                     int i = 0;
@@ -99,7 +101,7 @@ namespace GZipStreamMultithread
                     {
                         if (compressor._tasks.Count > maxTaskNumber)
                         {
-                            Thread.Sleep(100);
+                            Thread.Sleep(10);
                         }
                         else
                         {
