@@ -1,22 +1,36 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+VisualStudioVersion = 12.0.40629.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GZipStreamMultithread", "GZipStreamMultithread.csproj", "{F60AC315-796F-47FE-9ED9-EA6279AB576D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{B3B98E09-50D6-4CB3-8D47-AC4F07F5502D}"
+	ProjectSection(SolutionItems) = preProject
+		Performance1.psess = Performance1.psess
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
 		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{F60AC315-796F-47FE-9ED9-EA6279AB576D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F60AC315-796F-47FE-9ED9-EA6279AB576D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F60AC315-796F-47FE-9ED9-EA6279AB576D}.Debug|x64.ActiveCfg = Debug|x64
+		{F60AC315-796F-47FE-9ED9-EA6279AB576D}.Debug|x64.Build.0 = Debug|x64
 		{F60AC315-796F-47FE-9ED9-EA6279AB576D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F60AC315-796F-47FE-9ED9-EA6279AB576D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F60AC315-796F-47FE-9ED9-EA6279AB576D}.Release|x64.ActiveCfg = Release|x64
+		{F60AC315-796F-47FE-9ED9-EA6279AB576D}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal
