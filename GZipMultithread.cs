@@ -12,11 +12,27 @@ namespace GZipStreamMultithread
 {
     public class GZipMultithread
     {
-        private ConcurrentStack<Thread> _compressors = new ConcurrentStack<Thread>();
+        public ConcurrentStack<Thread> _compressors = new ConcurrentStack<Thread>();
 
-        public ConcurrentStack<DataBlock> _tasks = new ConcurrentStack<DataBlock>();
+        public ConcurrentQueue<DataBlock> _tasks = new ConcurrentQueue<DataBlock>();
 
-        public ConcurrentStack<DataBlock> _results = new ConcurrentStack<DataBlock>();
+        public ConcurrentDictionary<int, byte[]> _results = new ConcurrentDictionary<int, byte[]>();
+
+        //private bool _inputStreamComplete;
+        //public bool InputStreamComplete 
+        //{
+        //    get
+        //    {
+        //        return _inputStreamComplete;
+        //    }
+        //    set
+        //    {
+        //        _inputStreamComplete = value;
+        //    }
+        //}
+        public bool InputStreamComplete { get; set; }
+        public long TaskCount;
+        public long ResultCount;
 
         private Thread _writer;
         public GZipMultithread()
@@ -28,42 +44,38 @@ namespace GZipStreamMultithread
                 _compressors.Push(compressor);
                 compressor.Start();
             }
-            _writer = new Thread(WriteToFile);
-        }
-
-        private void WriteToFile(object obj)
-        {
-            MemoryStream memory = obj as MemoryStream;
-            FileStream file = File.Open("govno.gz", FileMode.OpenOrCreate, FileAccess.Write);
-            memory.CopyTo(file);
+            Execute();
+            // _writer = new Thread(WriteToFile);
         }
 
         public void Execute()
         {
+            //while (!InputStreamComplete && ResultCount != TaskCount)
+            //{
+            //    Thread.Sleep(1000);
+            //}
+            //this.Dispose();
+
             // delete idle threads?
         }
 
         public void AddTask(DataBlock task)
         {
-            _tasks.Push(task);
+            //_tasks.Push(task);           
+            _tasks.Enqueue(task);
         }
 
         private DataBlock GetTask()
         {
             DataBlock result;
             int tryNumber = 0;
-            while (!_tasks.TryPop(out result))
+            while (!_tasks.TryDequeue(out result))
             {
                 tryNumber++;
                 //*(new Random()).Next(10)
-                Thread.Sleep(100*tryNumber);
+                Thread.Sleep(100 * tryNumber);
             }
             return result;
-        }
-
-        public void AddTaskRange(DataBlock[] tasks)
-        {
-            _tasks.PushRange(tasks);
         }
 
         private void Compress()
@@ -71,60 +83,28 @@ namespace GZipStreamMultithread
             var task = GetTask();
             while (task != null)
             {
-                     //MemoryStream archiveFS = new MemoryStream();
-
-                DataBlock tmpdb;// = new DataBlock();
-                using (MemoryStream fileFS = new MemoryStream(task.Data))
-                {
-                    //using (FileStream archiveFS = File.Create("archive.gz"))
-
-                    using (MemoryStream archiveFS = new MemoryStream())
-                    {
-
-                        using (GZipStream compressionStream = new GZipStream(archiveFS,
-                           CompressionMode.Compress))
-                        {
-                            fileFS.CopyTo(compressionStream);
-                            
-                            byte[] buffer = archiveFS.ToArray();//GetBuffer();
-                            //GZipStream cs = new GZipStream(file, CompressionMode.Compress);
-                            //cs.Write(buffer, 0, buffer.Length);
-                            ////byte[] buffer = new byte[archiveFS.Length];
-                            ////archiveFS.Position = 0;
-                            ////archiveFS.Read(buffer, 0, buffer.Length);
-                            tmpdb = new DataBlock(task.ID, buffer);
-                            this.AddResult(tmpdb);
-                            
-                        }
-                        
-
-                    }
-                }
-                using (FileStream fileFS = File.Open("govno.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite))
-                {
-                    //using (MemoryStream archiveFS = new MemoryStream())
-
-                    using (FileStream archiveFS = File.Open("archive.gz", FileMode.Append, FileAccess.Write))
-                    {
-
-                        using (GZipStream compressionStream = new GZipStream(archiveFS,
-                           CompressionMode.Compress))
-                        {
-                            fileFS.CopyTo(compressionStream);
-                        }
-                    }
-                }
-                //byte[] source = tmpdb.Data.ToArray();
-                byte[] source = File.ReadAllBytes("archive.gz");
-                byte[] test = Decompress(source);
-
                 try
                 {
+                    using (MemoryStream input = new MemoryStream(task.Data))
+                    {
+                        using (MemoryStream output = new MemoryStream(task.Data.Length))
+                        {
+                            using (GZipStream cs = new GZipStream(output, CompressionMode.Compress))
+                            {
+                                cs.Write(task.Data, 0, task.Data.Length);
+                            }
+                            if (!this.AddResult(new DataBlock(task.ID, output.ToArray())))
+                            {
+                                this.AddTask(task);
+                            }
+                        }
+
+                    }
                 }
                 catch (OutOfMemoryException)
                 {
-                    this.AddTask(task);
                     GC.Collect();
+                    this.AddTask(task);
                     //memory = new MemoryStream();
                     //gzip = new GZipStream(memory, CompressionMode.Compress);
 
@@ -135,33 +115,34 @@ namespace GZipStreamMultithread
             }
         }
 
-        static byte[] Decompress(byte[] gzip)
-        {
-            using (GZipStream stream = new GZipStream(new MemoryStream(gzip),
-                CompressionMode.Decompress))
-            {
-                const int size = 4096;
-                byte[] buffer = new byte[size];
-                using (MemoryStream memory = new MemoryStream())
-                {
-                    int count = 0;
-                    do
-                    {
-                        count = stream.Read(buffer, 0, size);
-                        if (count > 0)
-                        {
-                            memory.Write(buffer, 0, count);
-                        }
-                    }
-                    while (count > 0);
-                    return memory.ToArray();
-                }
-            }
-        }
+        //static byte[] Decompress(byte[] gzip)
+        //{
+        //    using (GZipStream stream = new GZipStream(new MemoryStream(gzip),
+        //        CompressionMode.Decompress))
+        //    {
+        //        const int size = 4096;
+        //        byte[] buffer = new byte[size];
+        //        using (MemoryStream memory = new MemoryStream())
+        //        {
+        //            int count = 0;
+        //            do
+        //            {
+        //                count = stream.Read(buffer, 0, size);
+        //                if (count > 0)
+        //                {
+        //                    memory.Write(buffer, 0, count);
+        //                }
+        //            }
+        //            while (count > 0);
+        //            return memory.ToArray();
+        //        }
+        //    }
+        //}
 
-        private void AddResult(DataBlock dataBlock)
+        private bool AddResult(DataBlock dataBlock)
         {
-            _results.Push(dataBlock);
+            this.ResultCount++;
+            return _results.TryAdd(dataBlock.ID, dataBlock.Data);
         }
 
         public void Dispose()

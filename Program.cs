@@ -11,13 +11,18 @@ namespace GZipStreamMultithread
 {
     class Program
     {
+        static string FileName = string.Empty;
+
         static void Main(string[] args)
         {
             GC.Collect();
             //leaveOpen in GZipStream is true for MemoryStream output and false for File output
             Console.CancelKeyPress += new ConsoleCancelEventHandler(ConsoleCancelHandler);
             args[0] = "compress";
-            args[1] = "dd4.txt";
+            args[1] = "dd2.zip";
+            FileName = args[1];
+            //args[1] = "dd3.zip";
+            //args[1] = "dd.txt";
             args[2] = "log";
             //args[1] = "C:\\tmp\\MyTest.txt";
             //args[2] = "C:\\tmp\\MyTest";
@@ -72,48 +77,35 @@ namespace GZipStreamMultithread
                 //using (FileStream fileFS = new FileStream(fileName, FileMode.Open, FileAccess.Read))
                 using (FileStream fileFS = new FileStream(fileName, FileMode.Open, FileAccess.Read))
                 {
-                    var maxBufferSize = 4 * 1024 * 1024;
+                    var maxBufferSize = 4 * 1024 *1024;
                     var buffer = new byte[Math.Min(fileFS.Length, maxBufferSize)];           
                     var compressor = new GZipMultithread();
                     int i = 0;
 
                     long start = 0;
                     int count = fileFS.Read(buffer, 0, buffer.Length);
-
+                    Thread writer = new Thread(WriteToFile);
+                    writer.Start(compressor);
                     while (count > 0)
                     {
-                        compressor.AddTask(new DataBlock(i, buffer));
-                        start += count;  
-                        fileFS.Seek(start, SeekOrigin.Begin);
-                        count = fileFS.Read(buffer, 0, buffer.Length);
-                        i++;
+                        if (compressor._tasks.Count > 100)
+                        {
+                            Thread.Sleep(100);
+                        }
+                        else
+                        {
+                            compressor.AddTask(new DataBlock(i, buffer));
+                            compressor.TaskCount++;
+                            start += count;
+                            fileFS.Seek(start, SeekOrigin.Begin);
+                            buffer = new byte[Math.Min(fileFS.Length - start, maxBufferSize)];
+                            count = fileFS.Read(buffer, 0, buffer.Length);
+                            i++;
+                        }
                     }
-                    Thread.Sleep(10000);
-
-                    while (compressor._tasks.Count > 0)
+                    while (writer.ThreadState!=ThreadState.Stopped)
                     {
                         Thread.Sleep(1000);
-
-                    }
-                    fileFS.Seek(0, SeekOrigin.Begin);
-                    using (FileStream archiveFS = File.Create(fileName + ".gz"))
-                    {
-                        var results = compressor._results.OrderBy(o => o.ID);
-                        start = 0;
-                        foreach (var item in results)
-                        {
-                            archiveFS.Seek(start, SeekOrigin.Begin);
-                            archiveFS.Write(item.Data, 0, item.Data.Length);
-                            start += item.Data.Length;
-                        }
-                        //using (GZipStream compressionStream = new GZipStream(archiveFS,
-                        //   CompressionMode.Compress))
-                        //{
-                        //    //compressionStream.FileName = fileName;
-                        //    fileFS.CopyTo(compressionStream);
-                        //    archiveFS.Read(buffer, 0, buffer.Length);
-
-                        //}
                     }
                     compressor.Dispose();
                 }
@@ -124,6 +116,37 @@ namespace GZipStreamMultithread
             {
                 Console.WriteLine("Exception code: " + ex.HResult + " with message: " + ex.Message);
             }
+        }
+
+        private static void WriteToFile( object compressorObj)
+        {
+            GZipMultithread compressor = compressorObj as GZipMultithread;
+            string fileName = FileName;
+            using (FileStream archiveFS = File.Create(fileName + ".gz"))
+            {
+                long start =0;
+                var currentSegment = 0;
+                var tryNumber = 0;
+                //compressor.InputStreamComplete && compressor.ResultCount != compressor.TaskCount
+                while (currentSegment != compressor.TaskCount && compressor.TaskCount!=0)
+                {
+                    byte[] db;
+
+                    if (compressor._results.TryRemove(currentSegment, out db))
+                    {
+                        archiveFS.Seek(start, SeekOrigin.Begin);
+                        archiveFS.Write(db, 0, db.Length);
+                        start += db.Length;
+                        currentSegment++;
+                    }
+                    else
+                    {
+                        tryNumber++;
+                        Thread.Sleep(100 * tryNumber);
+                    }
+                }
+            }
+            Thread.CurrentThread.Abort();
         }
 
         protected static void ConsoleCancelHandler(object sender, ConsoleCancelEventArgs args)
