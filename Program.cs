@@ -16,14 +16,15 @@ namespace GZipStreamMultithread
         static void Main(string[] args)
         {
             GC.Collect();
+            Thread.CurrentThread.Name = "Main";
             Thread.CurrentThread.Priority = ThreadPriority.Lowest;
             //leaveOpen in GZipStream is true for MemoryStream output and false for File output
             Console.CancelKeyPress += new ConsoleCancelEventHandler(ConsoleCancelHandler);
             args[0] = "compress";
-            args[1] = "dd3.zip";
+            //args[1] = "dd2.zip";
             //args[1] = "test6.tar";
-           
-            //args[1] = "D:\\gzipExperiment\\dd2.zip";
+
+            args[1] = "D:\\gzipExperiment\\dd2.zip";
             //args[1] = "dd.txt";
             args[2] = "log";
             FileName = args[1];
@@ -94,14 +95,23 @@ namespace GZipStreamMultithread
 
                     long start = 0;
                     int count = fileFS.Read(buffer, 0, buffer.Length);
+                    
                     Thread writer = new Thread(WriteToFile);
+                    writer.Name = "Writer";
+                    writer.IsBackground = true;
                     writer.Start(compressor);
+                    
                     var maxTaskNumber = 64;
+                    var tryNumber = 0;
+                    var maxSleepTime = 1000;
                     while (count > 0)
                     {
                         if (compressor._tasks.Count > maxTaskNumber)
                         {
-                            Thread.Sleep(10);
+                            tryNumber++;
+                            var sleepTime = Math.Min(100 * tryNumber, maxSleepTime);
+                            Console.WriteLine("Read wait "+sleepTime.ToString());
+                            Thread.Sleep(sleepTime);
                         }
                         else
                         {
@@ -112,12 +122,16 @@ namespace GZipStreamMultithread
                             buffer = new byte[Math.Min(fileFS.Length - start, maxBufferSize)];
                             count = fileFS.Read(buffer, 0, buffer.Length);
                             i++;
+                            tryNumber = 0;
                         }
                     }
                     while (writer.ThreadState!=ThreadState.Stopped)
                     {
+                        Console.WriteLine("Write thread wait " + 1000);
+
                         Thread.Sleep(1000);
                     }
+
                     compressor.Dispose();
                 }
 
@@ -147,12 +161,17 @@ namespace GZipStreamMultithread
                     {
                         archiveFS.Seek(start, SeekOrigin.Begin);
                         archiveFS.Write(db, 0, db.Length);
+                        Console.WriteLine("Write block complete " + currentSegment);
+
                         start += db.Length;
                         currentSegment++;
+                        tryNumber = 0;
+
                     }
                     else
                     {
                         tryNumber++;
+                        Console.WriteLine("Write file wait " + 100 * tryNumber);
                         Thread.Sleep(100 * tryNumber);
                     }
                 }

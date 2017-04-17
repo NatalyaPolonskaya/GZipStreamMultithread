@@ -18,29 +18,18 @@ namespace GZipStreamMultithread
 
         public ConcurrentDictionary<int, byte[]> _results = new ConcurrentDictionary<int, byte[]>();
 
-        //private bool _inputStreamComplete;
-        //public bool InputStreamComplete 
-        //{
-        //    get
-        //    {
-        //        return _inputStreamComplete;
-        //    }
-        //    set
-        //    {
-        //        _inputStreamComplete = value;
-        //    }
-        //}
         public bool InputStreamComplete { get; set; }
         public long TaskCount;
         public long ResultCount;
 
-        private Thread _writer;
         public GZipMultithread()
         {
             var maxThreadNumber = Environment.ProcessorCount;
             for (int i = 0; i < maxThreadNumber; i++)
             {
                 var compressor = new Thread(Compress);
+                compressor.Name = "compressor" + i.ToString();
+                //compressor.IsBackground = true;
                 _compressors.Push(compressor);
                 compressor.Start();
             }
@@ -73,7 +62,10 @@ namespace GZipStreamMultithread
             {
                 tryNumber++;
                 //*(new Random()).Next(10)
-                Thread.Sleep(100 * tryNumber);
+                var sleepTime = 100 * tryNumber;// *(new Random()).Next(1, 10);
+                Console.WriteLine(Thread.CurrentThread.Name + " Task queue wait " + sleepTime);
+
+                Thread.Sleep(sleepTime);
             }
             return result;
         }
@@ -101,7 +93,7 @@ namespace GZipStreamMultithread
 
                     }
                 }
-                catch (OutOfMemoryException)
+                catch (Exception)
                 {
                     GC.Collect();
                     this.AddTask(task);
@@ -142,6 +134,19 @@ namespace GZipStreamMultithread
         private bool AddResult(DataBlock dataBlock)
         {
             this.ResultCount++;
+            var tryNumber = 0;
+            while (_results.Count > 64)
+            {
+                if (dataBlock.ID < this._results.Keys.Max())
+                {
+                    break;
+                }
+                tryNumber++;
+                var sleepTime = 100 * tryNumber * (new Random()).Next(1, 10);
+                Console.WriteLine(Thread.CurrentThread.Name + " Add result wait " + sleepTime);
+
+                Thread.Sleep(sleepTime);
+            }
             return _results.TryAdd(dataBlock.ID, dataBlock.Data);
         }
 
