@@ -21,10 +21,10 @@ namespace GZipStreamMultithread
             //leaveOpen in GZipStream is true for MemoryStream output and false for File output
             Console.CancelKeyPress += new ConsoleCancelEventHandler(ConsoleCancelHandler);
             args[0] = "compress";
-            //args[1] = "dd2.zip";
+            args[1] = "dd2.zip";
             //args[1] = "test6.tar";
 
-            args[1] = "D:\\gzipExperiment\\dd2.zip";
+            //args[1] = "D:\\gzipExperiment\\dd2.zip";
             //args[1] = "dd.txt";
             args[2] = "log";
             FileName = args[1];
@@ -98,15 +98,17 @@ namespace GZipStreamMultithread
                     
                     Thread writer = new Thread(WriteToFile);
                     writer.Name = "Writer";
-                    writer.IsBackground = true;
+                    //writer.IsBackground = true;
                     writer.Start(compressor);
                     
-                    var maxTaskNumber = 64;
                     var tryNumber = 0;
                     var maxSleepTime = 1000;
+                    var hasTail = (fileFS.Length % maxBufferSize)>0 ? 1 : 0;
+                    compressor.TaskCount = (fileFS.Length / maxBufferSize) + hasTail;
+
                     while (count > 0)
                     {
-                        if (compressor._tasks.Count > maxTaskNumber)
+                        if (compressor._tasks.Count > compressor.MaxTaskNumber)
                         {
                             tryNumber++;
                             var sleepTime = Math.Min(100 * tryNumber, maxSleepTime);
@@ -116,7 +118,6 @@ namespace GZipStreamMultithread
                         else
                         {
                             compressor.AddTask(new DataBlock(i, buffer));
-                            compressor.TaskCount++;
                             start += count;
                             fileFS.Seek(start, SeekOrigin.Begin);
                             buffer = new byte[Math.Min(fileFS.Length - start, maxBufferSize)];

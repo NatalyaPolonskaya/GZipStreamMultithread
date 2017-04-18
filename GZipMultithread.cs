@@ -14,7 +14,9 @@ namespace GZipStreamMultithread
     {
         public ConcurrentStack<Thread> _compressors = new ConcurrentStack<Thread>();
 
+
         public ConcurrentQueue<DataBlock> _tasks = new ConcurrentQueue<DataBlock>();
+        //private object _tasksQueueLock = new Object();
 
         public ConcurrentDictionary<int, byte[]> _results = new ConcurrentDictionary<int, byte[]>();
 
@@ -22,9 +24,14 @@ namespace GZipStreamMultithread
         public long TaskCount;
         public long ResultCount;
 
+        public int MaxTaskNumber { get; set; }
+
         public GZipMultithread()
         {
             var maxThreadNumber = Environment.ProcessorCount;
+            var taskNumberPerThread = 32;
+            this.MaxTaskNumber = taskNumberPerThread * maxThreadNumber;
+            this.MaxResultsNumber = this.MaxTaskNumber*2;
             for (int i = 0; i < maxThreadNumber; i++)
             {
                 var compressor = new Thread(Compress);
@@ -50,15 +57,19 @@ namespace GZipStreamMultithread
 
         public void AddTask(DataBlock task)
         {
-            //_tasks.Push(task);           
-            _tasks.Enqueue(task);
+            // TODO : free-lock Dequeue while Enqueue 
+            lock (this._tasks)
+            {
+                _tasks.Enqueue(task);
+            }
         }
 
         private DataBlock GetTask()
         {
             DataBlock result;
             int tryNumber = 0;
-            while (!_tasks.TryDequeue(out result))
+            var dequeueResult = _tasks.TryDequeue(out result);
+            while (!dequeueResult)
             {
                 tryNumber++;
                 //*(new Random()).Next(10)
@@ -66,6 +77,8 @@ namespace GZipStreamMultithread
                 Console.WriteLine(Thread.CurrentThread.Name + " Task queue wait " + sleepTime);
 
                 Thread.Sleep(sleepTime);
+                dequeueResult = _tasks.TryDequeue(out result);
+
             }
             return result;
         }
@@ -88,6 +101,7 @@ namespace GZipStreamMultithread
                             if (!this.AddResult(new DataBlock(task.ID, output.ToArray())))
                             {
                                 this.AddTask(task);
+                                this.MaxTaskNumber++;
                             }
                         }
 
@@ -97,6 +111,7 @@ namespace GZipStreamMultithread
                 {
                     GC.Collect();
                     this.AddTask(task);
+                    this.MaxTaskNumber++;
                     //memory = new MemoryStream();
                     //gzip = new GZipStream(memory, CompressionMode.Compress);
 
@@ -135,18 +150,26 @@ namespace GZipStreamMultithread
         {
             this.ResultCount++;
             var tryNumber = 0;
-            while (_results.Count > 64)
+            while (_results.Count > this.MaxResultsNumber)
             {
                 if (dataBlock.ID < this._results.Keys.Max())
                 {
+                    Console.WriteLine(Thread.CurrentThread.Name + " Add result overhead ");
+
                     break;
                 }
-                tryNumber++;
-                var sleepTime = 100 * tryNumber * (new Random()).Next(1, 10);
-                Console.WriteLine(Thread.CurrentThread.Name + " Add result wait " + sleepTime);
+                else
+                {
+                    return false;
+                }
+                //tryNumber++;
+                //var sleepTime = 100 * tryNumber * (new Random()).Next(1, 10);
+                //Console.WriteLine(Thread.CurrentThread.Name + " Add result wait " + sleepTime);
 
-                Thread.Sleep(sleepTime);
+                //Thread.Sleep(sleepTime);
             }
+            Console.WriteLine(Thread.CurrentThread.Name + " Add result normal ");
+
             return _results.TryAdd(dataBlock.ID, dataBlock.Data);
         }
 
@@ -157,5 +180,7 @@ namespace GZipStreamMultithread
                 item.Abort();
             }
         }
+
+        public int MaxResultsNumber { get; set; }
     }
 }
