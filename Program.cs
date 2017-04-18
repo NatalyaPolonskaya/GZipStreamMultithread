@@ -21,9 +21,11 @@ namespace GZipStreamMultithread
             //leaveOpen in GZipStream is true for MemoryStream output and false for File output
             Console.CancelKeyPress += new ConsoleCancelEventHandler(ConsoleCancelHandler);
             args[0] = "compress";
-            args[1] = "dd2.zip";
+            //args[1] = "dd2.zip";
             //args[1] = "test6.tar";
-
+            //args[1] = "sample-4294967296";
+            args[1] = "sample-37580963840";
+            
             //args[1] = "D:\\gzipExperiment\\dd2.zip";
             //args[1] = "dd.txt";
             args[2] = "log";
@@ -162,7 +164,7 @@ namespace GZipStreamMultithread
                     {
                         archiveFS.Seek(start, SeekOrigin.Begin);
                         archiveFS.Write(db, 0, db.Length);
-                        Console.WriteLine("Write block complete " + currentSegment);
+                        //Console.WriteLine("Write block complete " + currentSegment);
 
                         start += db.Length;
                         currentSegment++;

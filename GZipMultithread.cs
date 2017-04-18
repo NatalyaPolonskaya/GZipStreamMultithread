@@ -31,7 +31,8 @@ namespace GZipStreamMultithread
             var maxThreadNumber = Environment.ProcessorCount;
             var taskNumberPerThread = 32;
             this.MaxTaskNumber = taskNumberPerThread * maxThreadNumber;
-            this.MaxResultsNumber = this.MaxTaskNumber*2;
+            var resultNumberScale = 2;
+            this.MaxResultsNumber = this.MaxTaskNumber * resultNumberScale;
             for (int i = 0; i < maxThreadNumber; i++)
             {
                 var compressor = new Thread(Compress);
@@ -73,7 +74,7 @@ namespace GZipStreamMultithread
             {
                 tryNumber++;
                 //*(new Random()).Next(10)
-                var sleepTime = 100 * tryNumber;// *(new Random()).Next(1, 10);
+                var sleepTime = 100 * tryNumber *(new Random()).Next(1, 10);
                 Console.WriteLine(Thread.CurrentThread.Name + " Task queue wait " + sleepTime);
 
                 Thread.Sleep(sleepTime);
@@ -168,7 +169,7 @@ namespace GZipStreamMultithread
 
                 //Thread.Sleep(sleepTime);
             }
-            Console.WriteLine(Thread.CurrentThread.Name + " Add result normal ");
+            //Console.WriteLine(Thread.CurrentThread.Name + " Add result normal ");
 
             return _results.TryAdd(dataBlock.ID, dataBlock.Data);
         }
