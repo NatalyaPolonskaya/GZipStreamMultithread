@@ -17,8 +17,8 @@ namespace GZipStreamMultithread
             Thread.CurrentThread.Priority = ThreadPriority.Lowest;
             //leaveOpen in GZipStream is true for MemoryStream output and false for File output
             Console.CancelKeyPress += new ConsoleCancelEventHandler(ConsoleCancelHandler);
-            args[0] = "decompress";
-            args[1] = "dd.txt.gz";
+            args[0] = "compress";
+            args[1] = "dd4.txt";
             //args[1] = "dd3.zip";
             //args[1] = "test6.tar";
             //args[1] = "sample-4294967296";
@@ -70,6 +70,11 @@ namespace GZipStreamMultithread
                 var archiveName = args[2];
                 using (FileStream fileFS = new FileStream(fileName, FileMode.Open, FileAccess.Read))
                 {
+                    if (fileFS.Length<=0)
+                    {
+                        Console.WriteLine("File does not contain data");
+                        return;
+                    }
                     var compressor = new GZipMultithread(CompressionMode.Compress);
 
                     var writer = new Writer(archiveName);
