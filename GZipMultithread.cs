@@ -74,8 +74,8 @@ namespace GZipStreamMultithread
             {
                 tryNumber++;
                 //*(new Random()).Next(10)
-                var sleepTime = 100 * tryNumber *(new Random()).Next(1, 10);
-                Console.WriteLine(Thread.CurrentThread.Name + " Task queue wait " + sleepTime);
+                var sleepTime = 100 * tryNumber * (new Random()).Next(1, 10);
+                //Console.WriteLine(Thread.CurrentThread.Name + " Task queue wait " + sleepTime);
 
                 Thread.Sleep(sleepTime);
                 dequeueResult = _tasks.TryDequeue(out result);
@@ -155,7 +155,7 @@ namespace GZipStreamMultithread
             {
                 if (dataBlock.ID < this._results.Keys.Max())
                 {
-                    Console.WriteLine(Thread.CurrentThread.Name + " Add result overhead ");
+                    //Console.WriteLine(Thread.CurrentThread.Name + " Add result overhead ");
 
                     break;
                 }
@@ -173,7 +173,27 @@ namespace GZipStreamMultithread
 
             return _results.TryAdd(dataBlock.ID, dataBlock.Data);
         }
+        public bool GetResultsToWrite(int resultsNumber,int currentSegment, out Dictionary<int, byte[]> results)
+        {
+            bool result = false;
+            results = new Dictionary<int, byte[]>();
 
+            for (int i = 0; i < resultsNumber; i++)
+            {
+                var element = this._results.ElementAtOrDefault(i);
+                if (element.Value != null)
+                {
+                    results.Add(element.Key, element.Value);
+                    byte[] db;
+                    this._results.TryRemove(element.Key, out db);
+                }
+            }
+            if (results.Count != 0)
+            {
+                result = true;
+            }
+            return result;
+        }
         public void Dispose()
         {
             foreach (var item in this._compressors)
