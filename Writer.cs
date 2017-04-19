@@ -112,11 +112,11 @@ namespace GZipStreamMultithread
                 {
                     handler(this, new EventArgs());
                 }
-                //Thread.CurrentThread.Abort();
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Exception code: " + ex.HResult + " with message: " + ex.Message);
+                throw;
             }
         }
 

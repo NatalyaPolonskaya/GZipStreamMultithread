@@ -11,19 +11,13 @@ namespace GZipStreamMultithread
 {
     class Program
     {
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
+            var result = 0;
             Thread.CurrentThread.Name = "Main";
             Thread.CurrentThread.Priority = ThreadPriority.Lowest;
-            //leaveOpen in GZipStream is true for MemoryStream output and false for File output
+
             Console.CancelKeyPress += new ConsoleCancelEventHandler(ConsoleCancelHandler);
-            //args[0] = "decompress";
-            //args[1] = "dd.txt.gz";
-            ////args[1] = "dd3.zip";
-            ////args[1] = "test6.tar";
-            ////args[1] = "sample-4294967296";
-            ////args[1] = "sample-37580963840";
-            //args[2] = "dd-new.txt";//args[1];
 
             DateTime startTime = DateTime.Now;
             if (args.Length > 0)
@@ -34,7 +28,7 @@ namespace GZipStreamMultithread
                         {
                             Console.WriteLine("Start compression...");
                             Console.WriteLine("at time: " + startTime);
-                            Compress(args);
+                            result = Compress(args);
                             Console.WriteLine("Compression finished ");
                         }
                         break;
@@ -42,17 +36,21 @@ namespace GZipStreamMultithread
                         {
                             Console.WriteLine("Start decompression...");
                             Console.WriteLine("at time: " + startTime);
-                            Decompress(args);
+                            result = Decompress(args);
                             Console.WriteLine("Decompression finished ");
                         }
                         break;
                     default:
-                        Console.WriteLine("No such parameter");
+                        {
+                            result = 1;
+                            Console.WriteLine("No such parameter");
+                        }
                         break;
                 }
             }
             else
             {
+                result = 1;
                 Console.WriteLine("Not enough parameters");
             }
             DateTime finishTime = DateTime.Now;
@@ -60,9 +58,10 @@ namespace GZipStreamMultithread
             Console.WriteLine("Elapsed time: " + (finishTime - startTime).Duration());
             Console.WriteLine("Press any key to exit...");
             Console.ReadLine();
+            return result;
         }
 
-        private static void Compress(string[] args)
+        private static int Compress(string[] args)
         {
             try
             {
@@ -84,7 +83,7 @@ namespace GZipStreamMultithread
                     if (fileFS.Length <= 0)
                     {
                         Console.WriteLine("File does not contain data");
-                        return;
+                        return 1;
                     }
                     var compressor = new GZipMultithread(CompressionMode.Compress);
 
@@ -135,14 +134,16 @@ namespace GZipStreamMultithread
                     compressor.Dispose();
                 }
                 GC.Collect();
+                return 0;
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Exception code: " + ex.HResult + " with message: " + ex.Message);
+                return 1;
             }
         }
 
-        private static void Decompress(string[] args)
+        private static int Decompress(string[] args)
         {
             try
             {
@@ -153,7 +154,7 @@ namespace GZipStreamMultithread
                     if (fileFS.Length <= 0)
                     {
                         Console.WriteLine("File does not contain data");
-                        return;
+                        return 1;
                     }
                     var compressor = new GZipMultithread(CompressionMode.Decompress);
 
@@ -204,10 +205,12 @@ namespace GZipStreamMultithread
                     compressor.Dispose();
                 }
                 GC.Collect();
+                return 0;
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Exception code: " + ex.HResult + " with message: " + ex.Message);
+                return 1;
             }
         }
 
@@ -221,7 +224,7 @@ namespace GZipStreamMultithread
         protected static void ConsoleCancelHandler(object sender, ConsoleCancelEventArgs args)
         {
             Console.WriteLine("CTRL+C pressed. Process aborted.");
-            Environment.Exit(0);
+            Environment.Exit(1);
         }
     }
 }
