@@ -17,13 +17,13 @@ namespace GZipStreamMultithread
             Thread.CurrentThread.Priority = ThreadPriority.Lowest;
             //leaveOpen in GZipStream is true for MemoryStream output and false for File output
             Console.CancelKeyPress += new ConsoleCancelEventHandler(ConsoleCancelHandler);
-            args[0] = "compress";
-            args[1] = "dd4.txt";
-            //args[1] = "dd3.zip";
-            //args[1] = "test6.tar";
-            //args[1] = "sample-4294967296";
-            //args[1] = "sample-37580963840";
-            args[2] = args[1];
+            //args[0] = "decompress";
+            //args[1] = "dd.txt.gz";
+            ////args[1] = "dd3.zip";
+            ////args[1] = "test6.tar";
+            ////args[1] = "sample-4294967296";
+            ////args[1] = "sample-37580963840";
+            //args[2] = "dd-new.txt";//args[1];
 
             DateTime startTime = DateTime.Now;
             if (args.Length > 0)
@@ -68,9 +68,20 @@ namespace GZipStreamMultithread
             {
                 var fileName = args[1];
                 var archiveName = args[2];
+
+                var extesion = string.Empty;
+                var index = archiveName.LastIndexOf('.');
+                if (index >= 0)
+                {
+                    extesion = archiveName.Substring(index);
+                }
+                if (extesion != ".gz")
+                {
+                    archiveName += ".gz";
+                }
                 using (FileStream fileFS = new FileStream(fileName, FileMode.Open, FileAccess.Read))
                 {
-                    if (fileFS.Length<=0)
+                    if (fileFS.Length <= 0)
                     {
                         Console.WriteLine("File does not contain data");
                         return;
@@ -88,10 +99,10 @@ namespace GZipStreamMultithread
 
                     int currentBlockIndex = 0;
                     long start = 0;
-                    
+
                     var tryNumber = 0;
                     var maxSleepTime = 1000;
-                    
+
                     int count = fileFS.Read(buffer, 0, buffer.Length);
 
                     while (count > 0)
@@ -135,13 +146,18 @@ namespace GZipStreamMultithread
         {
             try
             {
-                var fileName = args[1];
-                var archiveName = args[2];
-                using (FileStream fileFS = new FileStream(fileName, FileMode.Open, FileAccess.Read))
+                var archiveName = args[1];
+                var fileName = args[2];
+                using (FileStream fileFS = new FileStream(archiveName, FileMode.Open, FileAccess.Read))
                 {
+                    if (fileFS.Length <= 0)
+                    {
+                        Console.WriteLine("File does not contain data");
+                        return;
+                    }
                     var compressor = new GZipMultithread(CompressionMode.Decompress);
 
-                    var writer = new Writer(archiveName);
+                    var writer = new Writer(fileName);
                     writer.Start(compressor);
 
                     var maxBufferSize = 128 * 1024;// the best size //1024*1024;// 4 * 1024 * 1024;

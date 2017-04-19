@@ -30,7 +30,7 @@ namespace GZipStreamMultithread
             try
             {
                 GZipMultithread compressor = compressorObj as GZipMultithread;
-                using (FileStream archiveFS = File.Create(this._fileName+".txt"))
+                using (FileStream archiveFS = File.Create(this._fileName))
                 {
                     Console.WriteLine();
                     var currentDataBlock = 0;

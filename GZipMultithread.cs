@@ -50,21 +50,22 @@ namespace GZipStreamMultithread
                     decompressor.Start();
                 }
             }
-            //Thread exec = new Thread(Execute);
+            Thread exec = new Thread(Execute);
+            exec.Start();
         }
 
 
         public void Execute()
         {
-            //if (this.TaskCount > 0 && this.ResultCount == this.TaskCount)
-            //{
-            //    // delete all threads
-            //    this.Dispose();
-            //}
-            //else
-            //{
-            //    Thread.Sleep(1000);
-            //}
+            if (this.TaskCount > 0 && this.ResultCount == this.TaskCount)
+            {
+                // delete all threads
+                this.Dispose();
+            }
+            else
+            {
+                Thread.Sleep(1000);
+            }
         }
 
         public void AddTask(DataBlock task)
