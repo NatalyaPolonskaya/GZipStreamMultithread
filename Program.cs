@@ -143,6 +143,24 @@ namespace GZipStreamMultithread
             }
         }
 
+                private static int FindHeaderBegin(byte[] db, int start)
+        {
+            if (db.Length > 1 && start >= 0)
+            {
+                for (int i = start; i < db.Length - 1; i++)
+                {
+                    if (db[i] == 31)
+                    {
+                        if (db[i + 1] == 139)
+                        {
+                            return i;
+                        }
+                    }
+                }
+            }
+            return -1;
+        }
+
         private static int Decompress(string[] args)
         {
             try
@@ -165,13 +183,14 @@ namespace GZipStreamMultithread
                     var buffer = new byte[Math.Min(fileFS.Length, maxBufferSize)];
 
                     var hasTail = (fileFS.Length % maxBufferSize) > 0 ? 1 : 0;
-                    compressor.TaskCount = (fileFS.Length / maxBufferSize) + hasTail;
 
-                    int currentBlockIndex = 0;
-                    long start = 0;
+
 
                     var tryNumber = 0;
                     var maxSleepTime = 1000;
+
+                    int currentBlockIndex = 0;
+                    long start = 0;
 
                     int count = fileFS.Read(buffer, 0, buffer.Length);
 
@@ -186,11 +205,29 @@ namespace GZipStreamMultithread
                         }
                         else
                         {
-                            compressor.AddTask(new DataBlock(currentBlockIndex, buffer));
-                            start += count;
-                            fileFS.Seek(start, SeekOrigin.Begin);
-                            buffer = new byte[Math.Min(fileFS.Length - start, maxBufferSize)];
-                            count = fileFS.Read(buffer, 0, buffer.Length);
+                            using (MemoryStream data = new MemoryStream())
+                            {
+                                var startIndex = FindHeaderBegin(buffer, 0);
+                                if (startIndex >= 0)
+                                {
+                                    var endIndex = FindHeaderBegin(buffer, startIndex + 2);
+                                    if (endIndex > startIndex)
+                                    {
+                                        data.Write(buffer, startIndex, endIndex - startIndex);
+                                        start += endIndex;
+                                    }
+                                    else
+                                    {
+                                        data.Write(buffer, startIndex, count - 1 - startIndex);
+                                        start += count;
+                                    }
+                                }
+                                fileFS.Seek(start, SeekOrigin.Begin);
+                                count = fileFS.Read(buffer, 0, buffer.Length);
+                                compressor.AddTask(new DataBlock(currentBlockIndex, data.ToArray()));
+                                compressor.TaskCount++;
+
+                            }
                             currentBlockIndex++;
                             tryNumber = 0;
                         }

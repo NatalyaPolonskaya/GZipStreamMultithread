@@ -86,7 +86,6 @@ namespace GZipStreamMultithread
             {
                 tryNumber++;
                 var sleepTime = 100 * tryNumber * (new Random()).Next(1, 10);
-                //Console.WriteLine(Thread.CurrentThread.Name + " Task queue wait " + sleepTime);
 
                 Thread.Sleep(sleepTime);
                 dequeueResult = _tasks.TryDequeue(out result);
@@ -105,7 +104,7 @@ namespace GZipStreamMultithread
                     {
                         using (MemoryStream output = new MemoryStream(task.Data.Length))
                         {
-                            using (GZipStream cs = new GZipStream(output, CompressionMode.Compress))
+                            using (GZipStream cs = new GZipStream(output, CompressionMode.Compress, true))
                             {
                                 cs.Write(task.Data, 0, task.Data.Length);
                             }
@@ -183,6 +182,7 @@ namespace GZipStreamMultithread
                 return false;
             }
         }
+
         public bool GetResultsToWrite(int resultsNumber, int currentSegment, out Dictionary<int, byte[]> results)
         {
             bool result = false;
