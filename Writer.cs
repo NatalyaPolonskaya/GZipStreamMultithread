@@ -37,65 +37,26 @@ namespace GZipStreamMultithread
                     var percentage = (int)(currentDataBlock / compressor.TaskCount) * 100;
                     Console.Write("\r{0}%", percentage);
                     var tryNumber = 0;
-
-                    Dictionary<int, byte[]> results = new Dictionary<int, byte[]>();
+                    long sizeBlockToWrite = 4*1024 * 1024;
 
                     while (currentDataBlock != compressor.TaskCount && compressor.TaskCount > 0)
                     {
-                        if (compressor.CurrentResultCount > 0 || results.Count > 0)
+                        if (compressor.CurrentResultCount > 0)
                         {
                             // get data sequence and write
-                            using (MemoryStream ms = new MemoryStream())
-                            {
-                                if (results.Count > 0)
-                                {
-                                    // try write to memory stream sequence
-                                    byte[] db;
-                                    var start = 0;
-                                    while (results.TryGetValue(currentDataBlock, out db))
-                                    {
-                                        ms.Seek(start, SeekOrigin.Begin);
-                                        ms.Write(db, 0, db.Length);
-                                        start += db.Length;
-                                        while (!results.Remove(currentDataBlock))
-                                        {
-                                            Thread.Sleep(10);
-                                        }
-                                        currentDataBlock++;
-                                    }
-                                    if (ms.Length > 0)
-                                    {
-                                        ms.Position = 0;
-                                        ms.CopyTo(archiveFS);
+                            MemoryStream ms = new MemoryStream();
+                            // try write to memory stream sequence
+                            currentDataBlock = compressor.GetResultsToWrite(sizeBlockToWrite, currentDataBlock, out ms);
 
-                                        percentage = (int)(((double)currentDataBlock / (double)compressor.TaskCount) * 100);
-                                        Console.Write("\r{0}%", percentage);
-                                    }
-                                }
-                            }
+                            if (ms.Length > 0)
+                            {
+                                ms.Position = 0;
+                                ms.CopyTo(archiveFS);
 
-                            Dictionary<int, byte[]> buffer = new Dictionary<int, byte[]>();
-                            var tryReadNumber = 0;
-                            if (compressor.GetResultsToWrite(compressor.CurrentResultCount, currentDataBlock, out buffer))
-                            {
-                                //add buffer to results
-                                foreach (var item in buffer)
-                                {
-                                    try
-                                    {
-                                        results.Add(item.Key, item.Value);
-                                    }
-                                    catch (Exception)
-                                    {
-                                        throw;
-                                    }
-                                }
+                                percentage = (int)(((double)currentDataBlock / (double)compressor.TaskCount) * 100);
+                                Console.Write("\r{0}%", percentage);
                             }
-                            else
-                            {
-                                tryReadNumber++;
-                                Thread.Sleep(Math.Min(100 * tryReadNumber, 1000));
-                            }
+                            ms.Close();
                         }
                         else
                         {

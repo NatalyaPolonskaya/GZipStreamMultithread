@@ -107,11 +107,12 @@ namespace GZipStreamMultithread
                     while (count > 0)
                     {
                         // if current count of tasks over then max tasks number need to stop read
-                        if (compressor.CurrentTaskCount > compressor.MaxTaskNumber)
+                        if (compressor.CurrentTaskCount > compressor.MaxTaskNumber )
                         {
                             tryNumber++;
-                            var sleepTime = Math.Min(100 * tryNumber, maxSleepTime);
-                            Thread.Sleep(sleepTime);
+                            //var sleepTime = Math.Min(100 * tryNumber, maxSleepTime);
+                            //Thread.Sleep(sleepTime);
+                            compressor.StopRead.WaitOne();
                         }
                         else
                         {

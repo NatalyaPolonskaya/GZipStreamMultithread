@@ -26,12 +26,14 @@ namespace GZipStreamMultithread
         public int MaxTaskNumber { get; set; }
         public int MaxResultNumber { get; set; }
 
+        public ManualResetEvent StopRead = new ManualResetEvent(true);
+
         public GZipMultithread(CompressionMode mode)
         {
             var maxThreadNumber = Environment.ProcessorCount;
             var taskNumberPerThread = 32;
-            this.MaxTaskNumber = taskNumberPerThread * maxThreadNumber * 2;
-            var resultNumberScale = 3;
+            this.MaxTaskNumber = taskNumberPerThread * maxThreadNumber;
+            var resultNumberScale = 2;
             this.MaxResultNumber = this.MaxTaskNumber * resultNumberScale;
             for (int i = 0; i < maxThreadNumber; i++)
             {
@@ -70,9 +72,14 @@ namespace GZipStreamMultithread
 
         public void AddTask(DataBlock task)
         {
+            if (this._tasks.Count > (this.MaxTaskNumber))
+            {
+                StopRead.Reset();
+            }
             // TODO : free-lock Dequeue while Enqueue 
             lock (this._tasks)
             {
+
                 _tasks.Enqueue(task);
             }
         }
@@ -161,16 +168,23 @@ namespace GZipStreamMultithread
 
         private bool AddResult(DataBlock dataBlock)
         {
+            if (this._results.Count > (this.MaxResultNumber / 2))
+            {
+                StopRead.Reset();
+            }
+
             while (_results.Count > this.MaxResultNumber)
             {
                 if (dataBlock.ID < this._results.Keys.Max())
                 {
+                    //Console.WriteLine("current results count " + this._results.Count);
                     break;
                 }
                 else
                 {
                     return false;
                 }
+
             }
             if (_results.TryAdd(dataBlock.ID, dataBlock.Data))
             {
@@ -183,26 +197,33 @@ namespace GZipStreamMultithread
             }
         }
 
-        public bool GetResultsToWrite(int resultsNumber, int currentSegment, out Dictionary<int, byte[]> results)
+        public int GetResultsToWrite(long resultSize, int currentDataBlock, out MemoryStream results)
         {
-            bool result = false;
-            results = new Dictionary<int, byte[]>();
-
-            for (int i = 0; i < resultsNumber; i++)
+            if ( (this._tasks.Count < (this.MaxTaskNumber / 2)))
             {
-                var element = this._results.ElementAtOrDefault(i);
-                if (element.Value != null)
+                StopRead.Set();
+            }
+            results = new MemoryStream();
+            byte[] db;
+            var start = 0;
+            while ((currentDataBlock < this.TaskCount))
+            {
+                if (resultSize > results.Length && this._results.TryGetValue(currentDataBlock, out db))
                 {
-                    results.Add(element.Key, element.Value);
-                    byte[] db;
-                    this._results.TryRemove(element.Key, out db);
+                    results.Seek(start, SeekOrigin.Begin);
+                    results.Write(db, 0, db.Length);
+                    start += db.Length;
+                    while (!this._results.TryRemove(currentDataBlock, out db))
+                    {
+                        Thread.Sleep(10);
+                    }
+                    currentDataBlock++;
                 }
+                else
+                    break;
             }
-            if (results.Count != 0)
-            {
-                result = true;
-            }
-            return result;
+
+            return currentDataBlock;
         }
 
         public void Dispose()
