@@ -111,7 +111,7 @@ namespace GZipStreamMultithread
                     {
                         using (MemoryStream output = new MemoryStream(task.Data.Length))
                         {
-                            using (GZipStream cs = new GZipStream(output, CompressionMode.Compress, true))
+                            using (GZipStream cs = new GZipStream(output, CompressionMode.Compress))
                             {
                                 cs.Write(task.Data, 0, task.Data.Length);
                             }
@@ -156,7 +156,7 @@ namespace GZipStreamMultithread
                         }
                     }
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     GC.Collect();
                     this.AddTask(task);
@@ -199,7 +199,7 @@ namespace GZipStreamMultithread
 
         public int GetResultsToWrite(long resultSize, int currentDataBlock, out MemoryStream results)
         {
-            if ( (this._tasks.Count < (this.MaxTaskNumber / 2)))
+            if ((this._tasks.Count < (this.MaxTaskNumber / 2)))
             {
                 StopRead.Set();
             }

@@ -107,9 +107,9 @@ namespace GZipStreamMultithread
                     while (count > 0)
                     {
                         // if current count of tasks over then max tasks number need to stop read
-                        if (compressor.CurrentTaskCount > compressor.MaxTaskNumber )
+                        if (compressor.CurrentTaskCount > compressor.MaxTaskNumber)
                         {
-                            tryNumber++;
+                            //tryNumber++;
                             //var sleepTime = Math.Min(100 * tryNumber, maxSleepTime);
                             //Thread.Sleep(sleepTime);
                             compressor.StopRead.WaitOne();
@@ -144,17 +144,20 @@ namespace GZipStreamMultithread
             }
         }
 
-                private static int FindHeaderBegin(byte[] db, int start)
+        private static int FindHeaderBegin(byte[] db, int start)
         {
-            if (db.Length > 1 && start >= 0)
+            if (db.Length > 2 && start >= 0)
             {
-                for (int i = start; i < db.Length - 1; i++)
+                for (int i = start; i < db.Length - 2; i++)
                 {
                     if (db[i] == 31)
                     {
                         if (db[i + 1] == 139)
                         {
-                            return i;
+                            if (db[i + 2] == 8)
+                            {
+                                return i;
+                            }
                         }
                     }
                 }

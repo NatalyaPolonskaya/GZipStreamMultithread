@@ -34,13 +34,16 @@ namespace GZipStreamMultithread
                 {
                     Console.WriteLine();
                     var currentDataBlock = 0;
-                    var percentage = (int)(currentDataBlock / compressor.TaskCount) * 100;
+                    var percentage = 0;// (int)(currentDataBlock / compressor.TaskCount) * 100;
                     Console.Write("\r{0}%", percentage);
                     var tryNumber = 0;
                     long sizeBlockToWrite = 4*1024 * 1024;
 
-                    while (currentDataBlock != compressor.TaskCount && compressor.TaskCount > 0)
+                    do
                     {
+
+
+
                         if (compressor.CurrentResultCount > 0)
                         {
                             // get data sequence and write
@@ -52,9 +55,14 @@ namespace GZipStreamMultithread
                             {
                                 ms.Position = 0;
                                 ms.CopyTo(archiveFS);
-
                                 percentage = (int)(((double)currentDataBlock / (double)compressor.TaskCount) * 100);
                                 Console.Write("\r{0}%", percentage);
+                            }
+                            else
+                            {
+                                tryNumber++;
+                                //Console.WriteLine("Write file wait " + 100 * tryNumber);
+                                Thread.Sleep(Math.Min(100 * tryNumber, 1000));
                             }
                             ms.Close();
                         }
@@ -64,7 +72,9 @@ namespace GZipStreamMultithread
                             //Console.WriteLine("Write file wait " + 100 * tryNumber);
                             Thread.Sleep(Math.Min(100 * tryNumber, 1000));
                         }
-                    }
+
+                    } while (currentDataBlock != compressor.TaskCount && compressor.TaskCount >= 0);
+
                 }
                 Console.WriteLine();
                 EventHandler handler = WriteDone;
