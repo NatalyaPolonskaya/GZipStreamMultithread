@@ -146,18 +146,16 @@ namespace GZipStreamMultithread
 
         private static int FindHeaderBegin(byte[] db, int start)
         {
-            if (db.Length > 2 && start >= 0)
+            if (db.Length > 1 && start >= 0)
             {
-                for (int i = start; i < db.Length - 2; i++)
+                for (int i = start; i < db.Length - 1; i++)
                 {
                     if (db[i] == 31)
                     {
                         if (db[i + 1] == 139)
                         {
-                            if (db[i + 2] == 8)
-                            {
+                   
                                 return i;
-                            }
                         }
                     }
                 }
